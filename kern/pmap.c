@@ -156,6 +156,9 @@ mem_init(void)
 	//////////////////////////////////////////////////////////////////////
 	// Make 'envs' point to an array of size 'NENV' of 'struct Env'.
 	// LAB 3: Your code here.
+	n = NENV * sizeof(struct Env);
+	envs = (struct Env*) boot_alloc(n);
+	memset(envs, 0, n);
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
@@ -165,22 +168,11 @@ mem_init(void)
 	// or page_insert
 	page_init();
 
-	struct PageInfo *p = pages;
-	n = 0;
-	for (; p < pages + npages; p++) {
-		if (p->pp_ref != 0) {
-			n++;
-			assert(p->pp_link == NULL);
-		}
-	}
-	//cprintf("Total free page: %d\n", n);	
-	//cprintf("Kernel End at: %x\n", boot_alloc(0));
 	check_page_free_list(1);
 
 	check_page_alloc();
 
 	check_page();
-
 	//////////////////////////////////////////////////////////////////////
 	// Now we set up virtual memory
 
@@ -193,7 +185,7 @@ mem_init(void)
 	// Your code goes here:
 	boot_map_region(kern_pgdir,
 		UPAGES, npages * sizeof(struct PageInfo),
-		PADDR(pages), PTE_U | PTE_P);
+		PADDR(pages), PTE_U);
 
 	//////////////////////////////////////////////////////////////////////
 	// Map the 'envs' array read-only by the user at linear address UENVS
@@ -202,6 +194,9 @@ mem_init(void)
 	//    - the new image at UENVS  -- kernel R, user R
 	//    - envs itself -- kernel RW, user NONE
 	// LAB 3: Your code here.
+	boot_map_region(kern_pgdir,
+		UENVS, NENV * sizeof(struct Env),
+		PADDR(envs), PTE_U);
 
 	//////////////////////////////////////////////////////////////////////
 	// Use the physical memory that 'bootstack' refers to as the kernel
@@ -216,7 +211,7 @@ mem_init(void)
 	// Your code goes here:
 	boot_map_region(kern_pgdir,
 		KSTACKTOP - KSTKSIZE, KSTKSIZE,
-		PADDR(bootstack), PTE_W | PTE_P);
+		PADDR(bootstack), PTE_W);
 		
 	//////////////////////////////////////////////////////////////////////
 	// Map all of physical memory at KERNBASE.
@@ -227,8 +222,7 @@ mem_init(void)
 	// Permissions: kernel RW, user NONE
 	// Your code goes here:
 	boot_map_region(kern_pgdir,
-		KERNBASE, ~KERNBASE,
-		0, PTE_W | PTE_P);
+		KERNBASE, ~KERNBASE, 0, PTE_W);
 
 	// Check that the initial page directory has been set up correctly.
 	check_kern_pgdir();
@@ -241,7 +235,17 @@ mem_init(void)
 	// If the machine reboots at this point, you've probably set up your
 	// kern_pgdir wrong.
 	lcr3(PADDR(kern_pgdir));
-
+//	int a;
+/*	struct PageInfo *p = pages;
+	n = 0;
+	for (; p < pages + npages; p++) {
+		if (p->pp_ref != 0) {
+			n++;
+			assert(p->pp_link == NULL);
+		}
+	}
+	cprintf("Total free page: %d\n", n); 	
+	cprintf("Kernel End at: %x\n", boot_alloc(0));*/
 	check_page_free_list(0);
 
 	// entry.S set the really important flags in cr0 (including enabling
