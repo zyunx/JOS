@@ -213,7 +213,7 @@ env_setup_vm(struct Env *e)
 		PADDR(pages), PTE_U);
 	map_kernel_region(e->env_pgdir, UENVS, PTSIZE,
 		PADDR(envs), PTE_U);
-	map_kernel_region(e->env_pgdir, KSTACKTOP - PGSIZE, PGSIZE,
+	map_kernel_region(e->env_pgdir, KSTACKTOP - KSTKSIZE, KSTKSIZE,
 		PADDR(bootstack), PTE_W); 
 	// UVPT maps the env's own page table read-only.
 	// Permissions: kernel R, user R
@@ -542,6 +542,7 @@ env_run(struct Env *e)
 	// LAB 3: Your code here.
 	if (curenv == NULL)
 	{
+/*
 		cprintf("env_run: prepare to swith to user space\n");
 		cprintf("stack:\n");
 		cprintf("oldss %x\n", e->env_tf.tf_ss); 
@@ -549,11 +550,19 @@ env_run(struct Env *e)
 		cprintf("eflags %x\n", e->env_tf.tf_eflags);
 		cprintf("cs %x\n", e->env_tf.tf_cs);
 		cprintf("eip %x\n", e->env_tf.tf_eip);
-//	while(1);
-		env_pop_tf(&e->env_tf);	
+*/
+                curenv = e;
+                curenv->env_status = ENV_RUNNING;
+		env_pop_tf(&curenv->env_tf);	
 	} else {
+                curenv->env_status = ENV_RUNNABLE;
+                curenv = e;
+                curenv->env_status = ENV_RUNNING;
+                curenv->env_runs++;
+                lcr3(PADDR(curenv->env_pgdir));
+                env_pop_tf(&curenv->env_tf);
 	}
 
-	panic("env_run not yet implemented");
+	//panic("env_run not yet implemented");
 }
 

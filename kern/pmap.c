@@ -141,6 +141,7 @@ mem_init(void)
 
 	// Permissions: kernel R, user R
 	kern_pgdir[PDX(UVPT)] = PADDR(kern_pgdir) | PTE_U | PTE_P;
+        cprintf("kern_pgdir: %x\n", kern_pgdir);
 
 	//////////////////////////////////////////////////////////////////////
 	// Allocate an array of npages 'struct PageInfo's and store it in 'pages'.
@@ -257,6 +258,8 @@ mem_init(void)
 
 	// Some more checks, only possible after kern_pgdir is installed.
 	check_page_installed_pgdir();
+
+        cprintf("kern_dir pte * : %x\n", pgdir_walk(kern_pgdir, kern_pgdir, 0));
 }
 
 // --------------------------------------------------------------
@@ -597,6 +600,38 @@ int
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
 	// LAB 3: Your code here.
+        void *bva, *eva, *a;
+        pte_t *ptep;
+
+
+        user_mem_check_addr = (uintptr_t)va;
+
+        a = (void *)va;
+        bva = ROUNDDOWN(a, PGSIZE);
+        eva = ROUNDUP(a + len, PGSIZE);
+
+        // check whether [va, va+len) is under ULIM
+        if ((uintptr_t)bva >= ULIM)
+        {
+                //user_mem_check_addr = (uintptr_t)bva;
+                return -E_FAULT;
+
+        }
+        if ((uintptr_t)eva >= ULIM)
+        {
+                //user_mem_check_addr = ULIM;
+                return -E_FAULT;
+        }
+
+        // check page present and permission allowed
+        for (a = bva; a < eva; a += PGSIZE) {
+                ptep = pgdir_walk(env->env_pgdir, a, 0);
+                perm |= PTE_P;
+                if (!ptep || (*ptep & perm) != perm) {
+                        //user_mem_check_addr = (uintptr_t)a;
+                        return -E_FAULT;
+                }
+        }
 
 	return 0;
 }
