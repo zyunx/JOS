@@ -59,6 +59,22 @@ struct mpproc {         // processor table entry [MP 4.3.1]
 	uint8_t reserved[8];
 } __attribute__((__packed__));
 
+
+struct mpbus {
+    uint8_t type;
+    uint8_t busid;
+    char typestr[6]; 
+} __attribute__((__packed__));
+
+
+struct mpioapic {
+    uint8_t type;
+    uint8_t apicid;
+    uint8_t version;
+    uint8_t flag;
+    physaddr_t address;
+} __attribute__((__packed__));
+
 // mpproc flags
 #define MPPROC_BOOT 0x02                // This mpproc is the bootstrap processor
 
@@ -168,6 +184,8 @@ mp_init(void)
 	struct mp *mp;
 	struct mpconf *conf;
 	struct mpproc *proc;
+    struct mpbus *bus;
+    struct mpioapic *ioapic;
 	uint8_t *p;
 	unsigned int i;
 
@@ -177,6 +195,7 @@ mp_init(void)
 	ismp = 1;
 	lapicaddr = conf->lapicaddr;
 
+    cprintf("MP prodct: %s\n", conf->product);
 	for (p = conf->entries, i = 0; i < conf->entry; i++) {
 		switch (*p) {
 		case MPPROC:
@@ -190,10 +209,20 @@ mp_init(void)
 				cprintf("SMP: too many CPUs, CPU %d disabled\n",
 					proc->apicid);
 			}
+            cprintf("SMP: CPU id %d\n", proc->apicid);
 			p += sizeof(struct mpproc);
 			continue;
 		case MPBUS:
+            bus = (struct mpbus *)p;
+            cprintf("SMP: Bus [id:%d] is %.6s\n", bus->busid, bus->typestr);
+            p += sizeof(struct mpbus);
+            continue;
 		case MPIOAPIC:
+            ioapic = (struct mpioapic *)p;
+            cprintf("SMP: IOAPIC [id:%d] is at 0x%x [flag: %x]\n",
+                        ioapic->apicid, ioapic->address, ioapic->flag);
+            p += sizeof(struct mpioapic);
+            continue;
 		case MPIOINTR:
 		case MPLINTR:
 			p += 8;

@@ -29,8 +29,32 @@ sched_yield(void)
 	// below to halt the cpu.
 
 	// LAB 4: Your code here.
+    //cprintf("CPU %d will sched\n", cpunum());
+        struct Env *e;
+        if (curenv == NULL) {
+            //cprintf("sched_yied: curenv NULL\n");
+                for (e = envs; e < envs + NENV; e++)
+                        if (e->env_status == ENV_RUNNABLE)
+                                env_run(e);
+        } else {
+            //cprintf("sched_yied: curenv id %x\n", curenv->env_id);
 
-	// sched_halt never returns
+                // sched others, and finally self
+                for (e = curenv + 1; e < envs + NENV; e++)
+                        if (e->env_status == ENV_RUNNABLE)
+                                env_run(e);
+                for (e = envs; e < curenv; e++)
+                        if (e->env_status == ENV_RUNNABLE)
+                                env_run(e); 
+                if (e->env_status == ENV_RUNNABLE ||
+                    e->env_status == ENV_RUNNING)
+                {
+                    env_run(e);
+                }
+
+        }
+    //cprintf("CPU %d no env.\n", cpunum());
+        // sched_halt never returns
 	sched_halt();
 }
 
@@ -59,15 +83,16 @@ sched_halt(void)
 	// Mark that no environment is running on this CPU
 	curenv = NULL;
 	lcr3(PADDR(kern_pgdir));
-
+    //cprintf("CPU %d kern_pgdir loaded\n", cpunum());
 	// Mark that this CPU is in the HALT state, so that when
 	// timer interupts come in, we know we should re-acquire the
 	// big kernel lock
 	xchg(&thiscpu->cpu_status, CPU_HALTED);
+    cprintf("CPU %d chage status CPU_HALTED\n", cpunum());
 
 	// Release the big kernel lock as if we were "leaving" the kernel
 	unlock_kernel();
-
+    
 	// Reset stack pointer, enable interrupts and then halt.
 	asm volatile (
 		"movl $0, %%ebp\n"

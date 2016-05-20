@@ -26,7 +26,8 @@
 	.type name, @function;	/* symbol type is function */		\
 	.align 2;		/* align function definition */		\
 	name:			/* function starts here */		\
-	pushl $(num);							\
+    cli;    \
+    pushl $(num);							\
 	jmp _alltraps
 
 /* Use TRAPHANDLER_NOEC for traps where the CPU doesn't push an error code.
@@ -37,7 +38,8 @@
 	.globl name;							\
 	.type name, @function;						\
 	.align 2;							\
-	name:								\
+	name:                               \
+    cli;    \
 	pushl $0;							\
 	pushl $(num);							\
 	jmp _alltraps
@@ -47,10 +49,45 @@
 /*
  * Lab 3: Your code here for generating entry points for the different traps.
  */
+TRAPHANDLER_NOEC(trap_divide, T_DIVIDE);
+TRAPHANDLER_NOEC(trap_debug, T_DEBUG);
+TRAPHANDLER_NOEC(trap_nmi, T_NMI);
+TRAPHANDLER_NOEC(trap_brkpt, T_BRKPT);
+TRAPHANDLER_NOEC(trap_oflow, T_OFLOW);
+TRAPHANDLER_NOEC(trap_bound, T_BOUND);
+TRAPHANDLER_NOEC(trap_illop, T_ILLOP);
+TRAPHANDLER_NOEC(trap_device, T_DEVICE);
+TRAPHANDLER_NOEC(trap_dblflt, T_DBLFLT);
+TRAPHANDLER(trap_tss, T_TSS);
+TRAPHANDLER(trap_segnp, T_SEGNP);
+TRAPHANDLER(trap_stack, T_STACK);
+TRAPHANDLER(trap_gpflt, T_GPFLT);
+TRAPHANDLER(trap_pgflt, T_PGFLT);
+TRAPHANDLER_NOEC(trap_fperr, T_FPERR);
+TRAPHANDLER_NOEC(trap_align, T_ALIGN);
+TRAPHANDLER_NOEC(trap_mchk, T_MCHK);
+TRAPHANDLER_NOEC(trap_simderr, T_SIMDERR);
 
 
+TRAPHANDLER_NOEC(trap_syscall, T_SYSCALL);
+
+
+/* 
+ * IRQs
+ */
+TRAPHANDLER_NOEC(trap_timer, IRQ_OFFSET + IRQ_TIMER);
+TRAPHANDLER_NOEC(trap_kbhandler, IRQ_OFFSET + IRQ_KBD);
 
 /*
  * Lab 3: Your code here for _alltraps
  */
-
+_alltraps:
+        pushl   %ds
+        pushl   %es
+        pushal
+         
+        movl    $GD_KD, %eax;
+        movw    %ax, %ds
+        movw    %ax, %es 
+        pushl   %esp
+        call    trap

@@ -60,16 +60,17 @@ __spin_initlock(struct spinlock *lk, char *name)
 void
 spin_lock(struct spinlock *lk)
 {
+    //cprintf("spin_lock\n");
 #ifdef DEBUG_SPINLOCK
 	if (holding(lk))
 		panic("CPU %d cannot acquire %s: already holding", cpunum(), lk->name);
 #endif
-
 	// The xchg is atomic.
 	// It also serializes, so that reads after acquire are not
 	// reordered before it. 
 	while (xchg(&lk->locked, 1) != 0)
-		asm volatile ("pause");
+                ;
+		//asm volatile ("pause");
 
 	// Record info about lock acquisition for debugging.
 #ifdef DEBUG_SPINLOCK
@@ -82,14 +83,24 @@ spin_lock(struct spinlock *lk)
 void
 spin_unlock(struct spinlock *lk)
 {
+   //cprintf("spin_unlock: \n");
+
 #ifdef DEBUG_SPINLOCK
 	if (!holding(lk)) {
 		int i;
 		uint32_t pcs[10];
 		// Nab the acquiring EIP chain before it gets released
+     //   cprintf("spin_unlock : lk->pcs %x\n", lk->pcs);
 		memmove(pcs, lk->pcs, sizeof pcs);
+      //  cprintf("spin_unlock : memmoved\n");
+       // cprintf("spin_unlock : lk->name %s\n", lk->name);
+       // cprintf("spin_unlock : lk->cpu %x\n", lk->cpu);
+       // cprintf("spin_unlock : cpu num %x\n", cpunum());
+       // cprintf("spin_unlock : thiscput %x\n", thiscpu);
+       // cprintf("spin_unlock : lk->cpu->cpu_id %x\n", /*lk->cpu->cpu_id*/thiscpu->cpu_id);
+
 		cprintf("CPU %d cannot release %s: held by CPU %d\nAcquired at:", 
-			cpunum(), lk->name, lk->cpu->cpu_id);
+			cpunum(), lk->name, /*lk->cpu->cpu_id*/thiscpu->cpu_id);
 		for (i = 0; i < 10 && pcs[i]; i++) {
 			struct Eipdebuginfo info;
 			if (debuginfo_eip(pcs[i], &info) >= 0)
@@ -107,6 +118,7 @@ spin_unlock(struct spinlock *lk)
 	lk->cpu = 0;
 #endif
 
+    //cprintf("spin_unlock: M\n");
 	// The xchg serializes, so that reads before release are 
 	// not reordered after it.  The 1996 PentiumPro manual (Volume 3,
 	// 7.2) says reads can be carried out speculatively and in
