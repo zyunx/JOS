@@ -14,7 +14,9 @@ umain(int argc, char **argv)
 		ipc_send(who, 0, 0, 0);
 	}
 
-	while (1) {
+    //int t;
+	//for (t = 0; t < 10; t++) {
+    while(1) {
 		uint32_t i = ipc_recv(&who, 0, 0);
 		cprintf("%x got %d from %x\n", sys_getenvid(), i, who);
 		if (i == 10)
